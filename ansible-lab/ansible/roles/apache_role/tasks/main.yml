@@ -11,6 +11,30 @@
     src: index.html.j2
     dest: /var/www/html/index.html
     mode: '0644'
+
+- name: Configure static MOTD via PAM (Ubuntu)
+  block:
+    - name: Remove any existing pam_motd entries
+      ansible.builtin.replace:
+        path: /etc/pam.d/sshd
+        regexp: '^session\s+optional\s+pam_motd\.so.*$'
+        replace: ''
+
+    - name: Enable static MOTD only (noupdate)
+      ansible.builtin.lineinfile:
+        path: /etc/pam.d/sshd
+        line: 'session optional pam_motd.so noupdate'
+        insertafter: EOF
+        state: present
+  when: ansible_distribution == "Ubuntu"
+
+- name: Deploy static MOTD
+  ansible.builtin.template:
+    src: motd.j2
+    dest: /etc/motd
+    owner: root
+    group: root
+    mode: '0644'
   notify: Restart apache2
 
 - name: Ensure apache2 is running

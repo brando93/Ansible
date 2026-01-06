@@ -5,11 +5,24 @@ services:
     volumes:
       - .:/ansible
 
-  node1:
+  dev:
     build: ./node
-    container_name: node1
+    container_name: dev
 
-  node2:
+  prod:
     build: ./node
-    container_name: node2
+    container_name: prod
 
+  jenkins:
+    build: ./jenkins
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    user: root
+    ports:
+      - "8080:8080"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  jenkins_home:
