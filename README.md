@@ -203,6 +203,9 @@ File: Jenkinsfile
 ```bash
 pipeline {
   agent any
+  parameters {
+      choice(name: 'ENV', choices: ['dev','prod'], description: 'Selecciona el entorno')
+  }
 
   stages {
 
@@ -215,11 +218,13 @@ pipeline {
 
     stage('Run Ansible Playbook') {
       steps {
-        echo 'Deploying Apache using Ansible'
-        sh '''
-          docker exec ansible-control \
-          ansible-playbook ansible/ansible/playbooks/deploy_apache.yml
-        '''
+        echo "Deploying Apache using Ansible to ${params.ENV}"
+        sh """
+          docker exec ansible-control bash -c \"
+            cd /ansible/ansible &&
+            ansible-playbook playbooks/deploy_apache.yml --limit ${params.ENV}
+          \"
+        """
       }
     }
 
