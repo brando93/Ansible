@@ -1,7 +1,12 @@
 pipeline {
   agent any
+
   parameters {
-      choice(name: 'ENV', choices: ['dev','prod'], description: 'Selecciona el entorno')
+    choice(
+      name: 'ENV',
+      choices: ['dev','prod'],
+      description: 'Selecciona el entorno'
+    )
   }
 
   stages {
@@ -13,17 +18,39 @@ pipeline {
       }
     }
 
-    stage('Run Ansible Playbook') {
+    stage('Build Ansible Control Image') {
       steps {
-        echo "Deploying Apache using Ansible to ${params.ENV}"
-        sh """
-          docker exec ansible-control bash -c \"
-            cd /ansible/ansible &&
-            ansible-playbook playbooks/deploy_apache.yml --limit ${params.ENV}
-          \"
-        """
+        sh '''
+          docker build -t ansible-control-image /workspace/control
+        '''
       }
     }
 
+    stage('Start Ansible Control Container') {
+      steps {
+        sh '''
+          docker rm -f ansible-control || true
+          HOST_PATH=$(docker inspect jenkins --format '{{range .Mounts}}{{if eq .Destination "/workspace"}}{{.Source}}{{end}}{{end}}')
+          docker run -d --name ansible-control \
+            --network ansible-lab_ansible-net \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "${HOST_PATH}":/ansible \
+            ansible-control-image \
+            sleep infinity
+        '''
+      }
+    }
+
+    stage('Deploy') {
+      steps {
+        echo "Deploying to ${params.ENV}"
+        sh """
+          docker exec ansible-control bash -c "
+            cd /ansible/ansible &&
+            ansible-playbook -i inventory/${params.ENV}.ini playbooks/deploy_fastapi.yml
+          "
+        """
+      }
+    }
   }
 }

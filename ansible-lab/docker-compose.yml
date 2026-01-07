@@ -1,20 +1,29 @@
+version: "3.9"
+
 services:
   ansible-control:
     build: ./control
     container_name: ansible-control
     volumes:
       - .:/ansible
+    networks:
+      - ansible-net
 
   dev:
     build: ./node
     container_name: dev
+    privileged: true
+    networks:
+      - ansible-net
 
   prod:
     build: ./node
     container_name: prod
+    privileged: true
+    networks:
+      - ansible-net
 
   jenkins:
-    build: ./jenkins
     image: jenkins/jenkins:lts
     container_name: jenkins
     user: root
@@ -23,6 +32,13 @@ services:
     volumes:
       - jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
+      - .:/workspace
+    # networks:
+    #   - ansible-net
 
 volumes:
   jenkins_home:
+
+networks:
+  ansible-net:
+    driver: bridge

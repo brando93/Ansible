@@ -1,0 +1,7 @@
+---
+- name: Deploy FastAPI and Docker
+  hosts: all
+  become: true
+  roles:
+    - docker
+    - fastapi

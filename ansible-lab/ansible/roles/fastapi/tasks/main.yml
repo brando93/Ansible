@@ -1,0 +1,37 @@
+---
+- name: Create FastAPI directory on remote host
+  file:
+    path: /tmp/fastapi
+    state: directory
+    mode: '0755'
+
+- name: Copy FastAPI application files to remote host
+  copy:
+    src: /ansible/fastapi/
+    dest: /tmp/fastapi/
+    mode: '0644'
+
+- name: Build FastAPI Docker image on remote host
+  docker_image:
+    name: fastapi-app
+    source: build
+    build:
+      path: /tmp/fastapi
+    tag: latest
+  register: build_result
+
+- name: Stop old FastAPI container
+  docker_container:
+    name: fastapi
+    state: absent
+
+- name: Run FastAPI container
+  docker_container:
+    name: fastapi
+    image: fastapi-app:latest
+    state: started
+    restart_policy: always
+    ports:
+      - "{{ fastapi_port }}:8000"
+    env:
+      ENV: "{{ env }}"

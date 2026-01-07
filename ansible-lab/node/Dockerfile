@@ -1,19 +1,32 @@
 FROM ubuntu:22.04
 
-RUN apt-get update && \
-    apt-get install -y openssh-server python3 sudo && \
-    mkdir /var/run/sshd
+ENV DEBIAN_FRONTEND=noninteractive
 
-RUN useradd -m ansible && \
-    echo "ansible ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+RUN apt-get update && apt-get install -y \
+    docker.io \
+    openssh-server \
+    iproute2 \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /home/ansible/.ssh
-COPY authorized_keys /home/ansible/.ssh/authorized_keys
+RUN mkdir -p /var/run/sshd
 
-RUN chown -R ansible:ansible /home/ansible/.ssh && \
-    chmod 700 /home/ansible/.ssh && \
-    chmod 600 /home/ansible/.ssh/authorized_keys
+# Crear carpeta SSH
+RUN mkdir -p /root/.ssh
+
+# Copiar authorized_keys
+COPY authorized_keys /root/.ssh/authorized_keys
+
+# Permisos correctos (CRÍTICO)
+RUN chmod 700 /root/.ssh && \
+    chmod 600 /root/.ssh/authorized_keys
+
+# Permitir login root (solo lab)
+RUN echo 'root:root' | chpasswd
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+RUN sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config
 
 EXPOSE 22
-CMD ["/usr/sbin/sshd", "-D"]
 
+CMD dockerd & /usr/sbin/sshd -D
